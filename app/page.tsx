@@ -1,16 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { useEffect } from 'react'
 import {
   Sidebar,
   SidebarContent,
@@ -21,35 +11,22 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { AddStudentDialog } from '@/components/Dialog/add-student-dialog'
 import { useStore } from '@/store/useStore'
+import AddStudentDialog from '@/components/add-student-dialog'
+import SearchFilters from '@/components/search-filters'
+import StudentTable from '@/components/student-table'
 
 export default function Home() {
-  const [dialogOpen, setDialogOpen] = useState(false)
   const { 
-    students, 
-    isLoading, 
-    error,
-    filters,
     sidebarItems,
     activePage,
     fetchStudents,
-    setFilters,
     setActivePage,
-    addStudent 
   } = useStore()
 
   useEffect(() => {
     fetchStudents()
-  }, [fetchStudents])
-
-  // Filter students based on search term
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(filters.search.toLowerCase())
-    const matchesYear = student.cohort === filters.year
-
-    return matchesSearch && matchesYear
-  })
+  }, [])
 
   return (
     <div className="flex h-screen">
@@ -79,7 +56,20 @@ export default function Home() {
         </SidebarContent>
       </Sidebar>
 
-      <main className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 space-y-6 p-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Students</h1>
+          <AddStudentDialog />
+        </div>
+        
+        <SearchFilters />
+        <StudentTable />
+      </div>
+    </div>
+  )
+}
+
+      {/* <main className="flex-1 p-6 overflow-auto">
         {error ? (
           <div className="text-red-500">Error: {error}</div>
         ) : (
@@ -176,7 +166,5 @@ export default function Home() {
             setDialogOpen(false)
           }}
         />
-      </main>
-    </div>
-  )
-}
+      </main> */}
+    

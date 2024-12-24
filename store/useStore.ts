@@ -1,53 +1,70 @@
 import { create } from 'zustand'
-import { Student } from '@/lib/types'
+import { Student, NewStudent } from '@/lib/types'
 import { studentApi } from '@/lib/api'
-import { Calendar, Inbox, LucideIcon, Search, Settings } from 'lucide-react'
+import { Calendar, Home, Inbox, LucideIcon, Search, Settings } from 'lucide-react'
 
-// Add interface for sidebar menu items
+// Type definitions
 interface MenuItem {
   title: string
   url: string
   icon: LucideIcon
 }
 
+interface StudentFilters {
+  year: string
+  class: string
+  search: string
+}
+
 interface AppState {
   // UI State
   sidebarItems: MenuItem[]
   activePage: string
+  selectedStudent: string | null
 
   // Student State
   students: Student[]
   isLoading: boolean
   error: string | null
-  filters: {
-    year: string
-    class: string
-    search: string
-  }
+  filters: StudentFilters
 
   // UI Actions
   setActivePage: (page: string) => void
-
+  setSelectedStudent: (studentId: string | null) => void
+  
   // Student Actions
   setStudents: (students: Student[]) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  setFilters: (filters: Partial<AppState['filters']>) => void
+  setFilters: (filters: Partial<StudentFilters>) => void
+  resetFilters: () => void
+  
+  // Computed Properties
+  filteredStudents: () => Student[]
+  getStudentById: (id: string) => Student | undefined
   
   // Async Student Actions
   fetchStudents: () => Promise<void>
-  addStudent: (student: Omit<Student, 'id' | 'date_joined' | 'last_login' | 'courses'>) => Promise<void>
+  addStudent: (student: NewStudent) => Promise<void>
   updateStudent: (id: string, updates: Partial<Student>) => Promise<void>
   deleteStudent: (id: string) => Promise<void>
 }
 
+// Default filter values
+const DEFAULT_FILTERS: StudentFilters = {
+  year: 'AY 2024-25',
+  class: 'CBSE 9',
+  search: '',
+}
+
+// Create the store
 export const useStore = create<AppState>((set, get) => ({
   // UI Initial State
   sidebarItems: [
     {
       title: "Home",
       url: "/",
-      icon: Inbox,
+      icon: Home,
     },
     {
       title: "Inbox",
@@ -58,7 +75,6 @@ export const useStore = create<AppState>((set, get) => ({
       title: "Calendar",
       url: "/calendar",
       icon: Calendar,
-
     },
     {
       title: "Search",
@@ -72,19 +88,17 @@ export const useStore = create<AppState>((set, get) => ({
     },
   ],
   activePage: 'Home',
+  selectedStudent: null,
 
   // Student Initial State
   students: [],
   isLoading: false,
   error: null,
-  filters: {
-    year: 'AY 2024-25',
-    class: 'CBSE 9',
-    search: '',
-  },
+  filters: DEFAULT_FILTERS,
 
   // UI Actions
   setActivePage: (page) => set({ activePage: page }),
+  setSelectedStudent: (studentId) => set({ selectedStudent: studentId }),
 
   // Student Actions
   setStudents: (students) => set({ students }),
@@ -93,6 +107,21 @@ export const useStore = create<AppState>((set, get) => ({
   setFilters: (filters) => set((state) => ({
     filters: { ...state.filters, ...filters }
   })),
+  resetFilters: () => set({ filters: DEFAULT_FILTERS }),
+
+  // Computed Properties
+  filteredStudents: () => {
+    const { students, filters } = get()
+    return students.filter(student => {
+      const matchesYear = !filters.year || student.cohort === filters.year
+      const matchesClass = !filters.class || 
+        student.courses.some(c => c.name.includes(filters.class))
+      const matchesSearch = !filters.search || 
+        student.name.toLowerCase().includes(filters.search.toLowerCase())
+      return matchesYear && matchesClass && matchesSearch
+    })
+  },
+  getStudentById: (id) => get().students.find(s => s.id === id),
 
   // Async Student Actions
   fetchStudents: async () => {
